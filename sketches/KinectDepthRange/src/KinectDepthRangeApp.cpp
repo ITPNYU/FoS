@@ -1,215 +1,187 @@
-#include "cinder/app/AppNative.h"
+#include "cinder/app/AppBasic.h"
+#include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
+#include "cinder/gl/GlslProg.h"
 #include "cinder/gl/Texture.h"
+#include "cinder/Utilities.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
 
+using namespace std;
 using namespace ci;
 using namespace ci::app;
-using namespace std;
 
-/** @brief abstract base class for all entity types */
-class Entity : public std::enable_shared_from_this<Entity> {
+class KinectDepthRangeApp : public ci::app::AppBasic {
 public:
 
-	typedef std::shared_ptr<Entity>			Ref;
-	typedef std::shared_ptr<const Entity>	ConstRef;
-	typedef std::weak_ptr<Entity>			WeakRef;
-
-protected:
-
-	/** @brief protected default constructor */
-	Entity() { /* no-op */ }
-
-	/** @brief overloadable initialization method */
-	virtual void initialize() = 0;
-
-public:
-
-	/** @brief virtual destructor */
-	virtual ~Entity() { /* no-op */ }
-
-	/** @brief overloadable update method */
-	virtual void update() = 0;
-
-	/** @brief overloadable draw method */
-	virtual void draw() = 0;
-
-	/** @brief returns a const shared_ptr to this entity */
-	Entity::ConstRef getEntityRef() const { return shared_from_this(); }
-
-	/** @brief returns a shared_ptr to this entity */
-	Entity::Ref getEntityRef() { return shared_from_this(); }
-};
-
-/** @brief controller implementation */
-class Controller : public Entity {
-public:
-
-	typedef std::shared_ptr<Controller>			Ref;
-	typedef std::shared_ptr<const Controller>	ConstRef;
-	typedef std::weak_ptr<Controller>			WeakRef;
-
-private:
-
-	/** @brief private default constructor */
-	Controller() : Entity() { /* no-op */ }
-
-public:
-
-	/** @brief destructor */
-	~Controller() { /* no-op */ }
-
-	/** @brief static creational method */
-	template<typename ... T> static Controller::Ref create(T&& ... args)
-	{
-		Controller::Ref t = Controller::Ref(new Controller(std::forward<T>(args) ...));
-		t->initialize();
-		return t;
-	}
-
-	/** @brief returns a const shared_ptr to this controller */
-	Controller::ConstRef getRef() const { return std::dynamic_pointer_cast<const Controller>( getEntityRef() ); }
-
-	/** @brief returns a shared_ptr to this controller */
-	Controller::Ref getRef() { return std::dynamic_pointer_cast<Controller>( getEntityRef() ); }
-};
-
-/** @brief abstract base class for directives */
-class Directive {
-public:
-
-	// TODO: This should be derived from Entity.
-
-	typedef std::shared_ptr<Directive> Ref;
-
-protected:
-
-	std::string		mLabel;			//!< the directive label
-	Controller::Ref mController;	//!< the controller
-
-	/** @brief protected default constructor */
-	Directive() { /* no-op */ }
-
-	/** @brief overloadable initialization method */
-	virtual void initialize() = 0;
-
-public:
-
-	/** @brief virtual destructor */
-	virtual ~Directive() { /* no-op */ }
-
-	/** @brief returns a const reference to the directive label */
-	const std::string& getLabel() const { return mLabel; }
-
-	/** @brief sets the directive label from input */
-	void setLabel(const std::string& iLabel) { mLabel = iLabel; }
-
-	/** @brief returns a const shared_ptr to controller */
-	Controller::ConstRef getController() const { return mController; }
-
-	/** @brief returns a shared_ptr to controller */
-	Controller::Ref getController() { return mController; }
-
-	/** @brief overloadable update method */
-	virtual void update() = 0;
-
-	/** @brief overloadable draw method */
-	virtual void draw() = 0;
-};
-
-
-class KinectDepthRangeApp : public AppNative {
-public:
-
-	void prepareSettings(ci::app::AppBasic::Settings* settings);
+	void prepareSettings(ci::app::AppBasic::Settings* settings) override;
 	
-	void setup();
-	void update();
-	void draw();
+	void setup() override;
+	void update() override;
+	void draw() override;
 
 private:
 
-	Kinect2::BodyFrame			mBodyFrame;
-	ci::Channel8u				mChannelBodyIndex;
-	ci::Channel16u				mChannelDepth;
+	long long					mTimeStamp;
+	long long					mTimeStampPrev;
+
 	Kinect2::DeviceRef			mDevice;
 
-	float						mFrameRate;
-	bool						mFullScreen;
-	ci::params::InterfaceGlRef	mParams;
+	ci::Channel8u				mChannelBody;
+	ci::Surface8u				mSurfaceColor;
+	ci::Channel16u				mChannelDepth;
+	ci::Surface32f				mSurfaceLookup;
+
+	ci::gl::TextureRef			mTextureBody;
+	ci::gl::TextureRef			mTextureColor;
+	ci::gl::TextureRef			mTextureDepth;
+	ci::gl::TextureRef			mTextureLookup;
+
+	ci::gl::GlslProgRef			mGlslProg;
 };
 
 void KinectDepthRangeApp::prepareSettings(Settings* settings)
 {
-	settings->prepareWindow( Window::Format().size(1024, 768).title( "ITP FoS Sketch" ) );
-	settings->setFrameRate( 60.0f );
+	settings->prepareWindow(ci::app::Window::Format().size(1024, 768).title("ITP FoS Sketch"));
+	settings->setFrameRate(60.0f);
 }
 
 void KinectDepthRangeApp::setup()
 {
-	mFrameRate = 0.0f;
-	mFullScreen = false;
-
+	// Enable texture mode:
+	gl::enable(GL_TEXTURE_2D);
+	// Initialize timestamp:
+	mTimeStamp = 0L;
+	mTimeStampPrev = mTimeStamp;
+	// Setup shader:
+	try {
+		mGlslProg = gl::GlslProg::create(gl::GlslProg::Format()
+			.vertex(loadAsset("kinect_depth.vert"))
+			.fragment(loadAsset("kinect_depth.frag")));
+	}
+	catch (gl::GlslProgCompileExc ex) {
+		console() << "GLSL Error: " << ex.what() << endl;
+		quit();
+	}
+	catch (gl::GlslNullProgramExc ex) {
+		console() << "GLSL Error: " << ex.what() << endl;
+		quit();
+	}
+	catch (...) {
+		console() << "Unknown GLSL Error" << endl;
+		quit();
+	}
+	// Initialize Kinect and register callbacks:
 	mDevice = Kinect2::Device::create();
 	mDevice->start();
-	mDevice->connectBodyEventHandler([&](const Kinect2::BodyFrame frame)
+	mDevice->connectBodyIndexEventHandler([&](const Kinect2::BodyIndexFrame& frame)
 	{
-		mBodyFrame = frame;
+		mChannelBody = frame.getChannel();
 	});
-	mDevice->connectBodyIndexEventHandler([&](const Kinect2::BodyIndexFrame frame)
+	mDevice->connectColorEventHandler([&](const Kinect2::ColorFrame& frame)
 	{
-		mChannelBodyIndex = frame.getChannel();
+		mSurfaceColor = frame.getSurface();
 	});
-	mDevice->connectDepthEventHandler([&](const Kinect2::DepthFrame frame)
+	mDevice->connectDepthEventHandler([&](const Kinect2::DepthFrame& frame)
 	{
 		mChannelDepth = frame.getChannel();
+		mTimeStamp = frame.getTimeStamp();
 	});
-
-	mParams = params::InterfaceGl::create("Params", Vec2i(200, 100));
-	mParams->addParam("Frame rate", &mFrameRate, "", true);
-	mParams->addParam("Full screen", &mFullScreen).key("f");
-	mParams->addButton("Quit", [&]() { quit(); }, "key=q");
 }
 
 void KinectDepthRangeApp::update()
 {
-	mFrameRate = getAverageFps();
-
-	if (mFullScreen != isFullScreen()) {
-		setFullScreen(mFullScreen);
-		mFullScreen = isFullScreen();
+	// Check whether depth-to-color mapping update is needed:
+	if ((mTimeStamp != mTimeStampPrev) && mSurfaceColor && mChannelDepth) {
+		// Update timestamp:
+		mTimeStampPrev = mTimeStamp;
+		// Initialize lookup surface:
+		mSurfaceLookup = Surface32f(mChannelDepth.getWidth(), mChannelDepth.getHeight(), false, SurfaceChannelOrder::RGB);
+		// Get depth-to-color mapping points:
+		vector<ivec2> tMappingPoints = mDevice->mapDepthToColor(mChannelDepth);
+		// Get color frame dimension:
+		vec2 tColorFrameDim(Kinect2::ColorFrame().getSize());
+		// Prepare iterators:
+		Surface32f::Iter iter = mSurfaceLookup.getIter();
+		vector<ivec2>::iterator v = tMappingPoints.begin();
+		// Create lookup mapping:
+		while (iter.line()) {
+			while (iter.pixel()) {
+				iter.r() = (float)v->x / tColorFrameDim.x;
+				iter.g() = 1.0f - (float)v->y / tColorFrameDim.y;
+				iter.b() = 0.0f;
+				++v;
+			}
+		}
 	}
 }
 
 void KinectDepthRangeApp::draw()
 {
-	gl::setViewport(getWindowBounds());
-	gl::clear(Colorf::black());
-	gl::color(ColorAf::white());
-	gl::disableDepthRead();
-	gl::disableDepthWrite();
+	// Prepare context:
+	gl::viewport(getWindowSize());
+	gl::clear();
+	gl::setMatricesWindow(getWindowSize());
 	gl::enableAlphaBlending();
-
-	// DEPTH DATA:
-
-	if (mChannelDepth) {
-		gl::enable(GL_TEXTURE_2D);
-		gl::TextureRef tex = gl::Texture::create(Kinect2::channel16To8(mChannelDepth));
-		gl::draw(tex, tex->getBounds(), Rectf(getWindowBounds()));
+	// Check for necessary inputs:
+	if (mSurfaceColor && mChannelDepth && mSurfaceLookup && mChannelBody) {
+		// Generate color texture:
+		if (mTextureColor) {
+			mTextureColor->update(mSurfaceColor);
+		}
+		else {
+			mTextureColor = gl::Texture::create(mSurfaceColor);
+		}
+		// Bind color texture:
+		mTextureColor->bind(0);
+		// Generate depth texture:
+		if (mTextureDepth) {
+			mTextureDepth->update(Kinect2::channel16To8(mChannelDepth));
+		}
+		else {
+			mTextureDepth = gl::Texture::create(Kinect2::channel16To8(mChannelDepth));
+		}
+		// Bind depth texture:
+		mTextureDepth->bind(1);
+		// Generate lookup texture:
+		if (mTextureLookup) {
+			mTextureLookup->update(mSurfaceLookup);
+		}
+		else {
+			mTextureLookup = gl::Texture::create(mSurfaceLookup, gl::Texture::Format().dataType(GL_FLOAT));
+		}
+		// Bind lookup texture:
+		mTextureLookup->bind(2);
+		// Generate body-index texture:
+		if (mTextureBody) {
+			mTextureBody->update(Kinect2::colorizeBodyIndex(mChannelBody));
+		}
+		else {
+			mTextureBody = gl::Texture::create(Kinect2::colorizeBodyIndex(mChannelBody));
+		}
+		// Bind body-index texture:
+		mTextureBody->bind(3);
+		// Bind shader and draw:
+		{
+			// Bind shader:
+			gl::ScopedGlslProg shaderBind(mGlslProg);
+			// Bind uniforms:
+			gl::setDefaultShaderVars();
+			mGlslProg->uniform("uTextureColor", 0);
+			mGlslProg->uniform("uTextureDepth", 1);
+			mGlslProg->uniform("uTextureLookup", 2);
+			mGlslProg->uniform("uTextureBody", 3);
+			// Set color:
+			gl::color(1.0, 1.0, 1.0, 1.0);
+			// Draw rect (TODO aspect ratio, etc):
+			gl::drawSolidRect(getWindowBounds());
+		}
+		// Unbind textures:
+		mTextureColor->unbind();
+		mTextureDepth->unbind();
+		mTextureLookup->unbind();
 	}
-
-	// USER MASK:
-
-	if (mChannelBodyIndex) {
-		gl::enable(GL_TEXTURE_2D);
-		gl::color(ColorAf(Colorf::white(), 0.15f));
-		gl::TextureRef tex = gl::Texture::create(Kinect2::colorizeBodyIndex(mChannelBodyIndex));
-		gl::draw(tex, tex->getBounds(), Rectf(getWindowBounds()));
-	}
-
-	mParams->draw();
 }
 
-CINDER_APP_NATIVE( KinectDepthRangeApp, RendererGl )
+CINDER_APP_BASIC(KinectDepthRangeApp, RendererGl)
