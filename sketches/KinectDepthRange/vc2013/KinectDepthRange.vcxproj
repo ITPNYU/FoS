@@ -119,8 +119,11 @@
     <ClCompile Include="..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src\Kinect2.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\Directive.h" />
+    <ClInclude Include="..\include\Controller.h" />
     <ClInclude Include="..\include\Resources.h" />
     <ClInclude Include="..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src\Kinect2.h" />
+    <ClInclude Include="..\include\State.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\assets\kinect_depth.frag" />
