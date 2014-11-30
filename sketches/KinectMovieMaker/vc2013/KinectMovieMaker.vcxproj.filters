@@ -14,20 +14,20 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Blocks">
-      <UniqueIdentifier>{D9D3F49B-BA97-4750-B73F-E64EBE1971CD}</UniqueIdentifier>
+      <UniqueIdentifier>{B1C5DD0B-CF08-4DDC-8C35-3EC4FAEA4395}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\Cinder-KCB2">
-      <UniqueIdentifier>{29645814-C75F-4E9C-8A29-76F96058FF9A}</UniqueIdentifier>
+      <UniqueIdentifier>{7DB1DDA5-45D3-4D1D-8097-93E24BF24661}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\Cinder-KCB2\src">
-      <UniqueIdentifier>{7C77DF36-3118-4D90-B492-7E86B3A834DC}</UniqueIdentifier>
+      <UniqueIdentifier>{E5F00C82-245F-4542-AECF-5D0ABCAFA675}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\KinectDepthRangeApp.cpp">
+    <ClCompile Include="..\src\KinectMovieMakerApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\KinectDepthRangeApp.cpp">
+    <ClCompile Include="..\src\KinectMovieMakerApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClInclude Include="..\include\Resources.h">
@@ -44,14 +44,14 @@
     <ClInclude Include="..\include\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\State.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="..\include\Controller.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\Directive.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\Controller.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="..\include\State.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -60,7 +60,11 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\assets\kinect_depth.vert" />
-    <None Include="..\assets\kinect_depth.frag" />
+    <None Include="..\assets\kinect_depth.vert">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\assets\kinect_depth.frag">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

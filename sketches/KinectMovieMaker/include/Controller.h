@@ -45,6 +45,9 @@ private:
 	ci::gl::TextureRef			mTextureDepth;
 	ci::gl::TextureRef			mTextureLookup;
 
+	ci::qtime::MovieGlRef		mMovieBackground;
+	ci::qtime::MovieGlRef		mMovieForeground;
+
 	ci::gl::GlslProgRef			mGlslProg;
 
 	/** @brief private constructor */
@@ -136,10 +139,15 @@ private:
 			mTimeStamp = frame.getTimeStamp();
 		});
 		// Add directives:
+		addDirective("no_background_video", "Please drag a background video onto this app!", 10);
+		addDirective("no_foreground_video", "Please drag a foreground video onto this app!", 10);
 		addDirective("no_user", "Is anyone there?", 1);
 		addDirective("too_many_users", "One person at a time, please!", 1);
-		// Load initial directive:
+		// Load initial directives:
 		pushDirective("no_user");
+		pushDirective("no_background_video");
+		// TODO: Reinstate?
+		pushDirective("no_foreground_video");
 	}
 
 public:
@@ -192,6 +200,16 @@ public:
 	/** @brief draw method */
 	void draw()
 	{
+		// Handle background movie, if available:
+		if (mMovieBackground) {
+			ci::gl::TextureRef tMovieTexture = mMovieBackground->getTexture();
+			if (tMovieTexture) {
+				// Set color:
+				ci::gl::color(1.0, 1.0, 1.0, 1.0);
+				// Draw texture:
+				ci::gl::draw(tMovieTexture, ci::vec2(0.0f, 0.0f));
+			}
+		}
 		// Check for necessary inputs:
 		if (mSurfaceColor && mChannelDepth && mSurfaceLookup && mChannelBody) {
 			// Generate color texture:
@@ -254,11 +272,54 @@ public:
 			mTextureDepth->unbind();
 			mTextureLookup->unbind();
 		}
+		// Handle foreground movie, if available:
+		if (mMovieForeground) {
+			ci::gl::TextureRef tMovieTexture = mMovieForeground->getTexture();
+			if (tMovieTexture) {
+				// Set color:
+				ci::gl::color(1.0, 1.0, 1.0, 1.0);
+				// Draw texture:
+				ci::gl::draw(tMovieTexture, ci::vec2(0.0f, 0.0f));
+			}
+		}
+		// Draw active directive, if available:
+		if (!mDirectiveStack.empty()) {
+			mDirectiveStack.back()->draw();
+		}
+	}
 
-		// Flightcheck routine:
-		if ( mDirectiveStack.empty() ) { return; }
-		// Draw active directive:
-		mDirectiveStack.front()->draw();
+	/** @brief file-drop handler method */
+	void fileDrop(ci::app::FileDropEvent event)
+	{
+		if (event.getNumFiles() == 1) {
+			const ci::fs::path& tPath = event.getFile(0);
+			// Handle background:
+			if (isTopDirective("no_background_video")) {
+				try { 
+					mMovieBackground = ci::qtime::MovieGl::create(tPath);
+					mMovieBackground->setLoop(true, false); // TODO
+					mMovieBackground->play(); // TODO
+				}
+				catch (ci::Exception &exc) { return; }
+				popDirective("no_background_video");
+			}
+			// Handle foreground:
+			else if (isTopDirective("no_foreground_video")) {
+				try { 
+					mMovieForeground = ci::qtime::MovieGl::create(tPath);
+					mMovieForeground->setLoop(true, false); // TODO
+					mMovieForeground->play(); // TODO
+				}
+				catch (ci::Exception &exc) { return; }
+				popDirective("no_foreground_video");
+			}
+			else {
+				// TODO: Handle other cases?
+			}
+		}
+		else {
+			// TODO: Push incorrect usage directive?
+		}
 	}
 
 	/** @brief adds a new directive to map */
@@ -272,19 +333,29 @@ public:
 
 	void pushDirective(const std::string& iName)
 	{
-		// TODO: rework this method to incorporate priority handling!
-
 		Directive::RefMap::iterator itFind = mDirectiveMap.find(iName);
 		if (itFind != mDirectiveMap.end()) {
 			// If directive is already in stack, remove it:
-			for (Directive::RefDeque::iterator it = mDirectiveStack.begin(); it != mDirectiveStack.end(); it++) {
-				if ( (*it).get() == (*itFind).second.get() ) {
-					mDirectiveStack.erase( it );
-					break;
-				}
+			popDirective((*itFind).second);
+			// Find insertion position:
+			Directive::RefDeque::iterator it = mDirectiveStack.begin();
+			while (it != mDirectiveStack.end() && (*it)->getPriority() < (*itFind).second->getPriority()) {
+				// Advance iter:
+				it++;
 			}
-			// Push directive:
-			mDirectiveStack.push_front((*itFind).second);
+			// Insert at iterator:
+			mDirectiveStack.insert(it, (*itFind).second);
+		}
+	}
+
+	void popDirective(Directive::Ref iDirective)
+	{
+		// If directive is in stack, remove it:
+		for (Directive::RefDeque::iterator it = mDirectiveStack.begin(); it != mDirectiveStack.end(); it++) {
+			if ((*it).get() == iDirective.get()) {
+				mDirectiveStack.erase(it);
+				return;
+			}
 		}
 	}
 
@@ -299,11 +370,15 @@ public:
 		}
 	}
 
-	void popDirectiveTop()
+	bool isTopDirective(Directive::Ref iDirective) const
 	{
-		// Flightcheck routine:
-		if (mDirectiveStack.empty()) { return; }
-		// Pop top directive:
-		mDirectiveStack.pop_front();
+		if (mDirectiveStack.empty()) { return false; }
+		return (mDirectiveStack.back().get() == iDirective.get());
+	}
+
+	bool isTopDirective(const std::string& iName) const
+	{
+		if (mDirectiveStack.empty()) { return false; }
+		return (mDirectiveStack.back()->getName() == iName);
 	}
 };

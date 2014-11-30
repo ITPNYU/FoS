@@ -4,7 +4,7 @@ using namespace std;
 using namespace ci;
 using namespace ci::app;
 
-class KinectDepthRangeApp : public ci::app::AppBasic {
+class KinectMovieMakerApp : public ci::app::AppBasic {
 public:
 
 	void prepareSettings(ci::app::AppBasic::Settings* settings) override;
@@ -13,32 +13,37 @@ public:
 	void update() override;
 	void draw() override;
 
+	void fileDrop(ci::app::FileDropEvent event) override;
 	void keyDown(ci::app::KeyEvent event) override;
 
 private:
 
 	Controller::Ref mController;
+
+	int mCurrentFrame; // todo temp
 };
 
-void KinectDepthRangeApp::prepareSettings(Settings* settings)
+void KinectMovieMakerApp::prepareSettings(Settings* settings)
 {
 	settings->prepareWindow(ci::app::Window::Format().size(1024, 768).title("ITP FoS Sketch"));
 	settings->setFrameRate(60.0f);
 }
 
-void KinectDepthRangeApp::setup()
+void KinectMovieMakerApp::setup()
 {
+	mCurrentFrame = 0; // todo temp
+
 	// Create controller:
 	mController = Controller::create( this, "controller" );
 }
 
-void KinectDepthRangeApp::update()
+void KinectMovieMakerApp::update()
 {
 	// Update controller:
 	mController->update();
 }
 
-void KinectDepthRangeApp::draw()
+void KinectMovieMakerApp::draw()
 {
 	// Prepare context:
 	gl::viewport(getWindowSize());
@@ -47,13 +52,20 @@ void KinectDepthRangeApp::draw()
 	gl::enableAlphaBlending();
 	// Draw controller:
 	mController->draw();
+
+
+	// TODO: debug save frame:
+	//ci::writeImage(getHomeDirectory() / "cinder" / "saveImage_" / (toString(mCurrentFrame) + ".png"), copyWindowSurface());
+	//mCurrentFrame++;
 }
 
-void KinectDepthRangeApp::keyDown(ci::app::KeyEvent event)
+void KinectMovieMakerApp::fileDrop(ci::app::FileDropEvent event)
 {
-	if (event.getChar() == ' ') {
-		mController->popDirectiveTop(); // todo just testing
-	}
+	mController->fileDrop(event);
 }
 
-CINDER_APP_BASIC(KinectDepthRangeApp, RendererGl)
+void KinectMovieMakerApp::keyDown(ci::app::KeyEvent event)
+{
+}
+
+CINDER_APP_BASIC(KinectMovieMakerApp, RendererGl)

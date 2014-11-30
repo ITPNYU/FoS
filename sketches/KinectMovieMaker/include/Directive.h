@@ -39,10 +39,10 @@ private:
 		State(iName),
 		mLabel(iLabel),
 		mPriority(iPriority),
-		mLabelFont( ci::Font( "Helvetica", 60 ) ),
-		mLabelOpacity( 1.0f ),
-		mLabelPosition( ci::vec2( 0.5, 1.0 ) )
-		{ /* no-op */ }
+		mLabelFont(ci::Font("Helvetica", 60)),
+		mLabelOpacity(1.0f),
+		mLabelPosition(ci::vec2(0.5, 1.0))
+	{ /* no-op */ }
 
 	/** @brief initialization method */
 	void initialize()
@@ -80,6 +80,9 @@ public:
 
 	/** @brief returns a shared_ptr to this directive object */
 	Directive::Ref getRef() { return std::dynamic_pointer_cast<Directive>( getBaseRef() ); }
+
+	/** @brief returns a const ref to this directive's priority level */
+	const int& getPriority() const { return mPriority; }
 
 	/** @brief returns a const ref to this directive's label */
 	const std::string& getLabel() const { return mLabel; }

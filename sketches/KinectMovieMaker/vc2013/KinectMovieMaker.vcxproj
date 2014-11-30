@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{52F727E0-E237-409B-92A0-DCBA0ECB88BB}</ProjectGuid>
-    <RootNamespace>KinectDepthRange</RootNamespace>
+    <ProjectGuid>{15899325-5785-4C3A-820F-CCF9E06B2A93}</ProjectGuid>
+    <RootNamespace>KinectMovieMaker</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\submodules\cinder_master\include";"..\..\..\submodules\cinder_master\boost";..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src;..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib;$(KINECTSDK20_DIR)\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;"..\..\..\submodules\cinder_master\include";"..\..\..\submodules\cinder_master\boost";..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src;..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib;$(KINECTSDK20_DIR)\inc;..\..\..\submodules\cinder_master\blocks\QuickTime\include\msw;..\..\..\submodules\cinder_master\blocks\QuickTime\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0502;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -64,7 +64,7 @@
       <AdditionalIncludeDirectories>"..\..\..\submodules\cinder_master\include";..\include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>cinder-$(PlatformToolset)_d.lib;%(AdditionalDependencies);..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib\$(PlatformTarget)\$(Configuration)\KCBv2.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\kinect20.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\Kinect20.Face.lib</AdditionalDependencies>
+      <AdditionalDependencies>cinder-$(PlatformToolset)_d.lib;%(AdditionalDependencies);..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib\$(PlatformTarget)\$(Configuration)\KCBv2.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\kinect20.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\Kinect20.Face.lib;..\..\..\submodules\cinder_master\blocks\QuickTime\lib\msw\x86\CVClient.lib;..\..\..\submodules\cinder_master\blocks\QuickTime\lib\msw\x86\QTMLClient.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>"..\..\..\submodules\cinder_master\lib\msw\$(PlatformTarget)"</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -80,7 +80,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\submodules\cinder_master\include";"..\..\..\submodules\cinder_master\boost";..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src;..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib;$(KINECTSDK20_DIR)\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;"..\..\..\submodules\cinder_master\include";"..\..\..\submodules\cinder_master\boost";..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src;..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib;$(KINECTSDK20_DIR)\inc;..\..\..\submodules\cinder_master\blocks\QuickTime\include\msw;..\..\..\submodules\cinder_master\blocks\QuickTime\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0502;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader />
@@ -95,7 +95,7 @@
       <AdditionalIncludeDirectories>"..\..\..\submodules\cinder_master\include";..\include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>cinder-$(PlatformToolset).lib;%(AdditionalDependencies);..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib\$(PlatformTarget)\KCBv2.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\kinect20.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\Kinect20.Face.lib</AdditionalDependencies>
+      <AdditionalDependencies>cinder-$(PlatformToolset).lib;%(AdditionalDependencies);..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\lib\$(PlatformTarget)\KCBv2.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\kinect20.lib;$(KINECTSDK20_DIR)\lib\$(PlatformTarget)\Kinect20.Face.lib;..\..\..\submodules\cinder_master\blocks\QuickTime\lib\msw\x86\CVClient.lib;..\..\..\submodules\cinder_master\blocks\QuickTime\lib\msw\x86\QTMLClient.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>"..\..\..\submodules\cinder_master\lib\msw\$(PlatformTarget)"</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
@@ -115,12 +115,12 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\KinectDepthRangeApp.cpp" />
+    <ClCompile Include="..\src\KinectMovieMakerApp.cpp" />
     <ClCompile Include="..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src\Kinect2.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\Directive.h" />
     <ClInclude Include="..\include\Controller.h" />
+    <ClInclude Include="..\include\Directive.h" />
     <ClInclude Include="..\include\Resources.h" />
     <ClInclude Include="..\..\..\submodules\cinder_master\blocks\Cinder-KCB2\src\Kinect2.h" />
     <ClInclude Include="..\include\State.h" />

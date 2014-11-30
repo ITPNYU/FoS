@@ -1,10 +1,5 @@
 #version 150
 
-// MOVIE TEXTURES:
-
-uniform sampler2D	uTextureBackground;
-uniform sampler2D	uTextureForeground;
-
 // USER TEXTURES:
 
 uniform sampler2D	uTextureColor;
@@ -25,11 +20,18 @@ void main( void )
 	vec2 tCoordAdj = texture( uTextureLookup, vTexCoord0 ).rg;
 	// Get masked-user color pixel:
 	vec4 tUserColor = vec4( texture( uTextureColor, tCoordAdj ).rgb, tBodyMask );
+
+	// todo temp test:
+	float tBri = ( tUserColor.r + tUserColor.g + tUserColor.b ) / 3.0;
+	tUserColor.r = tBri; 
+	tUserColor.g = tBri; 
+	tUserColor.b = tBri; 
+
 	// Set final color:
 	fragColor = tUserColor;
 
 
-	// todo testing
+	// todo debug testing
 	//fragColor = texture( uTextureBody, vTexCoord0 );
 }
  
