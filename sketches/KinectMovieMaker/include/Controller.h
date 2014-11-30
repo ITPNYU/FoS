@@ -5,10 +5,11 @@
 #include "Kinect2.h"
 
 #include "cinder/Utilities.h"
-#include "cinder/qtime/QuickTimeGl.h"
+#include "cinder/Rand.h"
 #include "cinder/gl/gl.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/gl/GlslProg.h"
+#include "cinder/qtime/QuickTimeGl.h"
 #include "cinder/app/AppBasic.h"
 #include "cinder/app/RendererGl.h"
 
@@ -29,6 +30,7 @@ private:
 	Directive::RefMap			mDirectiveMap;
 
 	std::size_t					mBodyCount;
+	bool						mSilhouetteUser;
 
 	long long					mTimeStamp;
 	long long					mTimeStampPrev;
@@ -54,7 +56,8 @@ private:
 	Controller(ci::app::AppBasic* iAppPtr, const std::string& iName) : 
 		State(iName),
 		mAppPtr(iAppPtr), 
-		mBodyCount(0)
+		mBodyCount(0),
+		mSilhouetteUser(false)
 	{ /* no-op */ }
 
 	/** @brief initialization method */
@@ -103,12 +106,14 @@ private:
 				if (tActiveCount == 0) {
 					// Remove conflicting directives, if applicable:
 					popDirective("too_many_users");
+					popDirective("watch_user_silhouette");
 					// Push directive:
 					pushDirective("no_user");
 				}
 				else if (tActiveCount > 1) {
 					// Remove conflicting directives, if applicable:
 					popDirective("no_user");
+					popDirective("watch_user_silhouette");
 					// Push directive:
 					pushDirective("too_many_users");
 				}
@@ -116,6 +121,16 @@ private:
 					// Remove conflicting directives, if applicable:
 					popDirective("no_user");
 					popDirective("too_many_users");
+					// Push silhouette directive (1/4 of the time, if both movies are present):
+					if (ci::randInt(4) == 0 && mMovieForeground && mMovieBackground) {
+						pushDirective("watch_user_silhouette");
+						mSilhouetteUser = true;
+					}
+					// Otherwise, make sure silhouette directive is popped:
+					else if (mSilhouetteUser) {
+						popDirective("watch_user_silhouette");
+						mSilhouetteUser = false;
+					}
 				}
 				// Set new count:
 				mBodyCount = tActiveCount;
@@ -139,14 +154,14 @@ private:
 			mTimeStamp = frame.getTimeStamp();
 		});
 		// Add directives:
-		addDirective("no_background_video", "Please drag a background video onto this app!", 10);
-		addDirective("no_foreground_video", "Please drag a foreground video onto this app!", 10);
-		addDirective("no_user", "Is anyone there?", 1);
-		addDirective("too_many_users", "One person at a time, please!", 1);
+		addDirective("no_background_video", "Please drag a background video onto this app!", 100);
+		addDirective("no_foreground_video", "Please drag a foreground video onto this app!", 100);
+		addDirective("too_many_users", "One person at a time, please!", 10);
+		addDirective("no_user", "Is anyone there?", 10);
+		addDirective("watch_user_silhouette", "This time, let's focus on your silhouette.", 1);
 		// Load initial directives:
 		pushDirective("no_user");
 		pushDirective("no_background_video");
-		// TODO: Reinstate?
 		pushDirective("no_foreground_video");
 	}
 
@@ -260,6 +275,8 @@ public:
 				mGlslProg->uniform("uTextureDepth", 1);
 				mGlslProg->uniform("uTextureLookup", 2);
 				mGlslProg->uniform("uTextureBody", 3);
+				mGlslProg->uniform("uGrayscale", true);
+				mGlslProg->uniform("uSilhouette", mSilhouetteUser);
 				// Set color:
 				ci::gl::color(1.0, 1.0, 1.0, 1.0);
 				// Draw rect (TODO aspect ratio, etc):
@@ -272,8 +289,8 @@ public:
 			mTextureDepth->unbind();
 			mTextureLookup->unbind();
 		}
-		// Handle foreground movie, if available:
-		if (mMovieForeground) {
+		// Handle foreground movie, if available (NOTE: and if solo user is not present):
+		if (mMovieForeground && mBodyCount != 1) {
 			ci::gl::TextureRef tMovieTexture = mMovieForeground->getTexture();
 			if (tMovieTexture) {
 				// Set color:
@@ -295,22 +312,16 @@ public:
 			const ci::fs::path& tPath = event.getFile(0);
 			// Handle background:
 			if (isTopDirective("no_background_video")) {
-				try { 
-					mMovieBackground = ci::qtime::MovieGl::create(tPath);
-					mMovieBackground->setLoop(true, false); // TODO
-					mMovieBackground->play(); // TODO
-				}
-				catch (ci::Exception &exc) { return; }
+				// Set movie:
+				if (!setMovieBackground(tPath)) { return; }
+				// Pop directive:
 				popDirective("no_background_video");
 			}
 			// Handle foreground:
 			else if (isTopDirective("no_foreground_video")) {
-				try { 
-					mMovieForeground = ci::qtime::MovieGl::create(tPath);
-					mMovieForeground->setLoop(true, false); // TODO
-					mMovieForeground->play(); // TODO
-				}
-				catch (ci::Exception &exc) { return; }
+				// Set movie:
+				if (!setMovieForeground(tPath)) { return; }
+				// Pop directive:
 				popDirective("no_foreground_video");
 			}
 			else {
@@ -380,5 +391,43 @@ public:
 	{
 		if (mDirectiveStack.empty()) { return false; }
 		return (mDirectiveStack.back()->getName() == iName);
+	}
+
+	bool setMovie(const ci::fs::path& iFilepath, const bool& iIsBackground)
+	{
+		// Set movie:
+		if (iIsBackground) { 
+			try { mMovieBackground = ci::qtime::MovieGl::create(iFilepath); }
+			catch (ci::Exception &exc) { return false; }
+		}
+		else { 
+			try { mMovieForeground = ci::qtime::MovieGl::create(iFilepath); }
+			catch (ci::Exception &exc) { return false; }
+		}
+		// Play or restart both movies:
+		if (mMovieBackground) {
+			mMovieBackground->stop();
+			mMovieBackground->setLoop(true, false);
+			mMovieBackground->seekToStart();
+			mMovieBackground->play();
+		}
+		if (mMovieForeground) {
+			mMovieForeground->stop();
+			mMovieForeground->setVolume(0.0f);
+			mMovieForeground->setLoop(true, false);
+			mMovieForeground->seekToStart();
+			mMovieForeground->play();
+		}
+		return true;
+	}
+
+	bool setMovieBackground(const ci::fs::path& iFilepath)
+	{
+		return setMovie(iFilepath, true);
+	}
+
+	bool setMovieForeground(const ci::fs::path& iFilepath)
+	{
+		return setMovie(iFilepath, false);
 	}
 };
